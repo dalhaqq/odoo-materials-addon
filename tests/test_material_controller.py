@@ -45,6 +45,8 @@ class TestMaterialController(HttpCase):
         result = response.json()['result']
         self.assertNotIn('error', result)
         self.assertIn('materials', result)
+        self.assertIn('total', result)
+        self.assertEqual(result['total'], 2)
         materials = result['materials']
         self.assertEqual(len(materials), 2)
         self.assertEqual(materials[0]['code'], 'M001')
@@ -62,6 +64,7 @@ class TestMaterialController(HttpCase):
         result = response.json()['result']
         self.assertNotIn('error', result)
         self.assertIn('materials', result)
+        self.assertEqual(result['total'], 1)
         materials = result['materials']
         self.assertEqual(len(materials), 1)
         self.assertEqual(materials[0]['code'], 'M001')
@@ -197,3 +200,142 @@ class TestMaterialController(HttpCase):
         suppliers = result['suppliers']
         self.assertGreater(len(suppliers), 0)
         self.assertIn({'id': self.supplier.id, 'name': self.supplier.name}, suppliers)
+
+    # --- Pagination tests ---
+
+    def test_get_materials_pagination(self):
+        self.authenticate('testuser', 'testuser')
+        response = self.url_open('/materials', data=json.dumps({
+            'jsonrpc': '2.0',
+            'method': 'call',
+            'params': {'page': 1, 'limit': 1},
+        }), headers={'Content-Type': 'application/json'})
+        result = response.json()['result']
+        self.assertNotIn('error', result)
+        self.assertEqual(len(result['materials']), 1)
+        self.assertEqual(result['total'], 2)
+        self.assertEqual(result['page'], 1)
+        self.assertEqual(result['limit'], 1)
+        self.assertEqual(result['pages'], 2)
+
+    def test_get_materials_pagination_page2(self):
+        self.authenticate('testuser', 'testuser')
+        response = self.url_open('/materials', data=json.dumps({
+            'jsonrpc': '2.0',
+            'method': 'call',
+            'params': {'page': 2, 'limit': 1},
+        }), headers={'Content-Type': 'application/json'})
+        result = response.json()['result']
+        self.assertNotIn('error', result)
+        self.assertEqual(len(result['materials']), 1)
+        # Ordered by code asc, page 2 = M002
+        self.assertEqual(result['materials'][0]['code'], 'M002')
+
+    # --- Search tests ---
+
+    def test_search_materials_by_name(self):
+        self.authenticate('testuser', 'testuser')
+        response = self.url_open('/materials', data=json.dumps({
+            'jsonrpc': '2.0',
+            'method': 'call',
+            'params': {'search': 'Material 1'},
+        }), headers={'Content-Type': 'application/json'})
+        result = response.json()['result']
+        self.assertNotIn('error', result)
+        self.assertEqual(result['total'], 1)
+        self.assertEqual(result['materials'][0]['code'], 'M001')
+
+    def test_search_materials_by_code(self):
+        self.authenticate('testuser', 'testuser')
+        response = self.url_open('/materials', data=json.dumps({
+            'jsonrpc': '2.0',
+            'method': 'call',
+            'params': {'search': 'M002'},
+        }), headers={'Content-Type': 'application/json'})
+        result = response.json()['result']
+        self.assertNotIn('error', result)
+        self.assertEqual(result['total'], 1)
+        self.assertEqual(result['materials'][0]['code'], 'M002')
+
+    # --- Sorting tests ---
+
+    def test_sort_materials_by_price_desc(self):
+        self.authenticate('testuser', 'testuser')
+        response = self.url_open('/materials', data=json.dumps({
+            'jsonrpc': '2.0',
+            'method': 'call',
+            'params': {'sort': 'buy_price', 'order': 'desc'},
+        }), headers={'Content-Type': 'application/json'})
+        result = response.json()['result']
+        self.assertNotIn('error', result)
+        # material1 buy_price=200, material2 buy_price=150 => desc = [200, 150]
+        self.assertEqual(result['materials'][0]['buy_price'], 200)
+        self.assertEqual(result['materials'][1]['buy_price'], 150)
+
+    # --- Multiple type filter tests ---
+
+    def test_filter_materials_multiple_types(self):
+        self.authenticate('testuser', 'testuser')
+        response = self.url_open('/materials/filter', data=json.dumps({
+            'jsonrpc': '2.0',
+            'method': 'call',
+            'params': {'type': 'fabric,jeans'},
+        }), headers={'Content-Type': 'application/json'})
+        result = response.json()['result']
+        self.assertNotIn('error', result)
+        self.assertEqual(result['total'], 2)
+        codes = [m['code'] for m in result['materials']]
+        self.assertIn('M001', codes)
+        self.assertIn('M002', codes)
+
+    def test_filter_materials_invalid_type(self):
+        self.authenticate('testuser', 'testuser')
+        response = self.url_open('/materials/filter', data=json.dumps({
+            'jsonrpc': '2.0',
+            'method': 'call',
+            'params': {'type': 'silk'},
+        }), headers={'Content-Type': 'application/json'})
+        result = response.json()['result']
+        self.assertIn('error', result)
+        self.assertIn('Invalid material type', result['error'])
+
+    def test_filter_materials_missing_type(self):
+        self.authenticate('testuser', 'testuser')
+        response = self.url_open('/materials/filter', data=json.dumps({
+            'jsonrpc': '2.0',
+            'method': 'call',
+            'params': {},
+        }), headers={'Content-Type': 'application/json'})
+        result = response.json()['result']
+        self.assertIn('error', result)
+        self.assertIn('Material type is required', result['error'])
+
+    # --- Create missing fields tests ---
+
+    def test_create_material_missing_fields(self):
+        self.authenticate('testuser', 'testuser')
+        response = self.url_open('/materials/create', data=json.dumps({
+            'jsonrpc': '2.0',
+            'method': 'call',
+            'params': {'code': 'M099'},
+        }), headers={'Content-Type': 'application/json'})
+        result = response.json()['result']
+        self.assertIn('error', result)
+        self.assertIn('Missing required fields', result['error'])
+
+    def test_create_material_duplicate_code(self):
+        self.authenticate('testuser', 'testuser')
+        response = self.url_open('/materials/create', data=json.dumps({
+            'jsonrpc': '2.0',
+            'method': 'call',
+            'params': {
+                'code': 'M001',
+                'name': 'Dupe',
+                'type': 'cotton',
+                'buy_price': 200,
+                'supplier_id': self.supplier.id,
+            },
+        }), headers={'Content-Type': 'application/json'})
+        result = response.json()['result']
+        self.assertIn('error', result)
+        self.assertIn('unique', result['error'].lower())
