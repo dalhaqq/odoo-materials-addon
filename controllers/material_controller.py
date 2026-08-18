@@ -1,79 +1,13 @@
-import json
-import logging
-from functools import wraps
-
-from werkzeug.wrappers import Response
-
 from odoo import http
 from odoo.http import request
-from odoo.exceptions import AccessError, ValidationError
 
-_logger = logging.getLogger(__name__)
-
+from ..rest.helpers import (
+    _json_response, handle_errors, _filter_fields, _paginate, _parse_pagination,
+)
 
 MATERIAL_FIELDS = ['id', 'code', 'name', 'type', 'buy_price', 'supplier_id']
+ALLOWED_FIELDS = {'code', 'name', 'type', 'buy_price', 'supplier_id'}
 VALID_SORT_FIELDS = {'code', 'name', 'buy_price', 'type'}
-
-
-def _json_response(data, status=200):
-    """Create a JSON response with proper status code."""
-    return Response(
-        status=status,
-        content_type='application/json; charset=utf-8',
-        response=json.dumps(data, default=str),
-    )
-
-
-def handle_errors(func):
-    """Decorator that catches exceptions and returns JSON error responses.
-
-    - ValidationError, ValueError: shows message to user (client error)
-    - AccessError: shows permission denied (403)
-    - Other exceptions: logs error, returns generic message (500)
-    """
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except ValidationError as e:
-            return _json_response({'error': str(e)}, status=400)
-        except ValueError as e:
-            return _json_response({'error': f'Invalid input: {e}'}, status=400)
-        except AccessError:
-            return _json_response({'error': 'Permission denied'}, status=403)
-        except Exception as e:
-            _logger.exception('Unexpected error in %s', func.__name__)
-            return _json_response({'error': 'Internal server error'}, status=500)
-    return wrapper
-
-
-def _paginate(env, model_name, domain, page, limit, order):
-    """Search with pagination, return (records, total_count)."""
-    Model = env[model_name]
-    total = Model.search_count(domain)
-    offset = (page - 1) * limit
-    records = Model.search(domain, offset=offset, limit=limit, order=order)
-    return records, total
-
-
-def _parse_pagination(kwargs):
-    """Extract and validate pagination, sort params from kwargs.
-
-    Returns:
-        tuple: (page, limit, order_string)
-    """
-    page = max(int(kwargs.get('page', 1)), 1)
-    limit = min(max(int(kwargs.get('limit', 20)), 1), 100)
-
-    sort_field = kwargs.get('sort', 'code')
-    sort_order = kwargs.get('order', 'asc')
-
-    if sort_field not in VALID_SORT_FIELDS:
-        sort_field = 'code'
-    if sort_order not in ('asc', 'desc'):
-        sort_order = 'asc'
-
-    return page, limit, f'{sort_field} {sort_order}'
 
 
 class MaterialController(http.Controller):
@@ -82,7 +16,7 @@ class MaterialController(http.Controller):
     @handle_errors
     def list_materials(self, **kwargs):
         """List materials with optional type filter, pagination, search, and sorting."""
-        page, limit, order = _parse_pagination(kwargs)
+        page, limit, order = _parse_pagination(kwargs, VALID_SORT_FIELDS)
         search = kwargs.get('search', '').strip()
         material_type = kwargs.get('type', '').strip()
 
@@ -128,12 +62,15 @@ class MaterialController(http.Controller):
     @handle_errors
     def create_material(self, **kwargs):
         """Create a new material. Required: code, name, type, buy_price, supplier_id."""
+        filtered = _filter_fields(kwargs, ALLOWED_FIELDS)
+
         required_fields = ['code', 'name', 'type', 'buy_price', 'supplier_id']
-        missing = [f for f in required_fields if f not in kwargs or not kwargs[f]]
+        missing = [f for f in required_fields if f not in filtered]
         if missing:
             return _json_response({'error': f'Missing required fields: {missing}'}, status=400)
 
-        material = request.env['materials.material'].create(kwargs)
+        # Odoo ORM handles type validation and model constraints
+        material = request.env['materials.material'].create(filtered)
         return _json_response({'material': material.read(MATERIAL_FIELDS)}, status=201)
 
     @http.route('/api/materials/<int:material_id>', type='http', auth='user', methods=['PATCH'], csrf=False)
@@ -143,7 +80,13 @@ class MaterialController(http.Controller):
         material = request.env['materials.material'].get_by_id(material_id)
         if not material:
             return _json_response({'error': 'Material not found'}, status=404)
-        material.write(kwargs)
+
+        filtered = _filter_fields(kwargs, ALLOWED_FIELDS)
+        if not filtered:
+            return _json_response({'error': 'No valid fields to update'}, status=400)
+
+        # Odoo ORM handles type validation and model constraints
+        material.write(filtered)
         return _json_response({'material': material.read(MATERIAL_FIELDS)})
 
     @http.route('/api/materials/<int:material_id>', type='http', auth='user', methods=['DELETE'], csrf=False)

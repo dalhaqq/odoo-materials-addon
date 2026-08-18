@@ -290,3 +290,87 @@ class TestMaterialController(HttpCase):
         result = json.loads(response.text)
         self.assertIn('error', result)
         self.assertIn('Invalid input', result['error'])
+
+    # --- Type validation tests ---
+
+    def test_create_material_invalid_buy_price_type(self):
+        """buy_price as string should return 400 (Odoo ORM validation)."""
+        self.authenticate('testuser', 'testuser')
+        response = self.url_open('/api/materials',
+                                 data=json.dumps({
+                                     'code': 'M010',
+                                     'name': 'Bad Price',
+                                     'type': 'fabric',
+                                     'buy_price': 'not_a_number',
+                                     'supplier_id': self.supplier.id,
+                                 }),
+                                 headers={'Content-Type': 'application/json'})
+        result = json.loads(response.text)
+        self.assertIn('error', result)
+
+    def test_create_material_invalid_supplier_id_type(self):
+        """supplier_id as string should return 400 (Odoo ORM validation)."""
+        self.authenticate('testuser', 'testuser')
+        response = self.url_open('/api/materials',
+                                 data=json.dumps({
+                                     'code': 'M011',
+                                     'name': 'Bad Supplier',
+                                     'type': 'fabric',
+                                     'buy_price': 200,
+                                     'supplier_id': 'abc',
+                                 }),
+                                 headers={'Content-Type': 'application/json'})
+        result = json.loads(response.text)
+        self.assertIn('error', result)
+
+    def test_create_material_ignores_disallowed_fields(self):
+        """Fields not in CREATE_FIELDS should be silently ignored."""
+        self.authenticate('testuser', 'testuser')
+        response = self.url_open('/api/materials',
+                                 data=json.dumps({
+                                     'code': 'M012',
+                                     'name': 'Clean Create',
+                                     'type': 'fabric',
+                                     'buy_price': 200,
+                                     'supplier_id': self.supplier.id,
+                                     'id': 9999,
+                                     'create_uid': 9999,
+                                 }),
+                                 headers={'Content-Type': 'application/json'})
+        result = json.loads(response.text)
+        self.assertNotIn('error', result)
+        material = result['material'][0]
+        # id should be auto-generated, not 9999
+        self.assertNotEqual(material['id'], 9999)
+
+    def test_update_material_invalid_buy_price_type(self):
+        """PATCH with non-numeric buy_price should return 400 (Odoo ORM validation)."""
+        self.authenticate('testuser', 'testuser')
+        response = self.url_open(f'/api/materials/{self.material1.id}',
+                                 data=json.dumps({'buy_price': 'abc'}),
+                                 headers={'Content-Type': 'application/json'},
+                                 method='PATCH')
+        result = json.loads(response.text)
+        self.assertIn('error', result)
+
+    def test_update_material_only_disallowed_fields(self):
+        """PATCH with only disallowed fields should return 400."""
+        self.authenticate('testuser', 'testuser')
+        response = self.url_open(f'/api/materials/{self.material1.id}',
+                                 data=json.dumps({'id': 9999, 'create_uid': 9999}),
+                                 headers={'Content-Type': 'application/json'},
+                                 method='PATCH')
+        result = json.loads(response.text)
+        self.assertIn('error', result)
+        self.assertIn('No valid fields to update', result['error'])
+
+    def test_update_material_code(self):
+        """PATCH with code should succeed (code is allowed)."""
+        self.authenticate('testuser', 'testuser')
+        response = self.url_open(f'/api/materials/{self.material1.id}',
+                                 data=json.dumps({'code': 'M001-NEW'}),
+                                 headers={'Content-Type': 'application/json'},
+                                 method='PATCH')
+        result = json.loads(response.text)
+        self.assertNotIn('error', result)
+        self.assertEqual(result['material'][0]['code'], 'M001-NEW')
