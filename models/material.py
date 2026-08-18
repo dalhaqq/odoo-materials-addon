@@ -1,6 +1,7 @@
+import re
+
 from odoo import models, fields, api
 from odoo.exceptions import ValidationError
-import re
 
 
 class Material(models.Model):
@@ -35,6 +36,11 @@ class Material(models.Model):
     def get_available_types(self):
         """Return list of available material types."""
         return self._fields['type'].selection
+
+    def get_by_id(self, material_id):
+        """Get material by ID or return None if not found."""
+        material = self.browse(material_id)
+        return material if material.exists() else None
 
     def copy(self, default=None):
         if default is None:
