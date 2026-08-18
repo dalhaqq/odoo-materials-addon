@@ -29,10 +29,12 @@ Restart Odoo, update module list, install "Materials".
 
 REST API using proper HTTP methods. Authenticate via session.
 
-### GET /api/materials - List all materials
+### GET /api/materials - List materials (with optional type filter)
 
 **Query Params:**
 ```
+?type=fabric              # filter by type
+?type=fabric,jeans        # filter by multiple types
 ?page=1&limit=20&search=keyword&sort=code&order=asc
 ```
 
@@ -45,13 +47,6 @@ REST API using proper HTTP methods. Authenticate via session.
   "limit": 20,
   "pages": 1
 }
-```
-
-### GET /api/materials/filter - Filter by type
-
-```
-GET /api/materials/filter?type=fabric
-GET /api/materials/filter?type=fabric,jeans
 ```
 
 ### GET /api/materials/<id> - Get single material

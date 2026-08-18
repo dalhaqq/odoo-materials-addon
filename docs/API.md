@@ -8,22 +8,26 @@ Base URL: `http://<odoo-host>`
 
 ## GET /api/materials
 
-List all active materials with pagination, search, and sorting.
+List all active materials with optional type filter, pagination, search, and sorting.
 
 **Query Params:**
 
 | Param | Type | Default | Description |
 |-------|------|---------|-------------|
+| `type` | string | `""` | Filter by type(s), comma-separated. Valid: `fabric`, `jeans`, `cotton` |
 | `page` | int | 1 | Page number (min 1) |
 | `limit` | int | 20 | Results per page (max 100) |
 | `search` | string | `""` | Search keyword (matches name or code, case-insensitive) |
 | `sort` | string | `"code"` | Sort field: `code`, `name`, `buy_price`, `type` |
 | `order` | string | `"asc"` | Sort direction: `asc` or `desc` |
 
-**Example Request:**
+**Examples:**
 
 ```
-GET /api/materials?page=1&limit=10&search=fabric&sort=buy_price&order=desc
+GET /api/materials                                   # all materials
+GET /api/materials?type=fabric                       # filter by type
+GET /api/materials?type=fabric,jeans                 # filter by multiple types
+GET /api/materials?page=1&limit=10&search=fabric&sort=buy_price&order=desc  # combined
 ```
 
 **Response (200):**
@@ -47,46 +51,10 @@ GET /api/materials?page=1&limit=10&search=fabric&sort=buy_price&order=desc
 }
 ```
 
----
-
-## GET /api/materials/filter
-
-Filter materials by type (single or multiple).
-
-**Query Params:**
-
-| Param | Type | Required | Description |
-|-------|------|----------|-------------|
-| `type` | string | Yes | Material type(s), comma-separated for multiple |
-| `page` | int | - | Page number, default 1 |
-| `limit` | int | - | Results per page, default 20, max 100 |
-| `sort` | string | - | Sort field, default `code` |
-| `order` | string | - | Sort direction, default `asc` |
-
-Valid types: `fabric`, `jeans`, `cotton`
-
-**Example Request:**
-
-```
-GET /api/materials/filter?type=fabric,jeans
-```
-
-**Response (200):**
-
-```json
-{
-  "materials": [...],
-  "total": 8,
-  "page": 1,
-  "limit": 20
-}
-```
-
 **Errors:**
 
 | Status | Error | Cause |
 |--------|-------|-------|
-| 400 | `Material type is required` | `type` param missing |
 | 400 | `Invalid material type(s): [...]` | Unknown type value |
 
 ---

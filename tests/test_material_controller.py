@@ -52,7 +52,7 @@ class TestMaterialController(HttpCase):
 
     def test_filter_materials(self):
         self.authenticate('testuser', 'testuser')
-        response = self.url_open('/api/materials/filter?type=fabric')
+        response = self.url_open('/api/materials?type=fabric')
         result = json.loads(response.text)
         self.assertNotIn('error', result)
         self.assertIn('materials', result)
@@ -234,7 +234,7 @@ class TestMaterialController(HttpCase):
 
     def test_filter_materials_multiple_types(self):
         self.authenticate('testuser', 'testuser')
-        response = self.url_open('/api/materials/filter?type=fabric,jeans')
+        response = self.url_open('/api/materials?type=fabric,jeans')
         result = json.loads(response.text)
         self.assertNotIn('error', result)
         self.assertEqual(result['total'], 2)
@@ -244,17 +244,18 @@ class TestMaterialController(HttpCase):
 
     def test_filter_materials_invalid_type(self):
         self.authenticate('testuser', 'testuser')
-        response = self.url_open('/api/materials/filter?type=silk')
+        response = self.url_open('/api/materials?type=silk')
         result = json.loads(response.text)
         self.assertIn('error', result)
         self.assertIn('Invalid material type', result['error'])
 
-    def test_filter_materials_missing_type(self):
+    def test_filter_materials_no_type_returns_all(self):
+        """Without type param, all materials should be returned."""
         self.authenticate('testuser', 'testuser')
-        response = self.url_open('/api/materials/filter')
+        response = self.url_open('/api/materials')
         result = json.loads(response.text)
-        self.assertIn('error', result)
-        self.assertIn('Material type is required', result['error'])
+        self.assertNotIn('error', result)
+        self.assertEqual(result['total'], 2)
 
     # --- Create missing fields tests ---
 

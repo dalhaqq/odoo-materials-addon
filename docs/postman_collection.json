@@ -59,7 +59,7 @@
           }
         },
         {
-          "name": "List Materials with Search",
+          "name": "List with Search",
           "request": {
             "method": "GET",
             "url": {
@@ -70,6 +70,34 @@
                 { "key": "search", "value": "fabric" },
                 { "key": "sort", "value": "buy_price" },
                 { "key": "order", "value": "desc" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Filter by Type",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/materials?type=fabric",
+              "host": ["{{base_url}}"],
+              "path": ["api", "materials"],
+              "query": [
+                { "key": "type", "value": "fabric" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Filter by Multiple Types",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/materials?type=fabric,jeans",
+              "host": ["{{base_url}}"],
+              "path": ["api", "materials"],
+              "query": [
+                { "key": "type", "value": "fabric,jeans" }
               ]
             }
           }
@@ -131,36 +159,8 @@
       ]
     },
     {
-      "name": "Filter & Utilities",
+      "name": "Utilities",
       "item": [
-        {
-          "name": "Filter by Type",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{base_url}}/api/materials/filter?type=fabric",
-              "host": ["{{base_url}}"],
-              "path": ["api", "materials", "filter"],
-              "query": [
-                { "key": "type", "value": "fabric" }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Filter by Multiple Types",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{base_url}}/api/materials/filter?type=fabric,jeans",
-              "host": ["{{base_url}}"],
-              "path": ["api", "materials", "filter"],
-              "query": [
-                { "key": "type", "value": "fabric,jeans" }
-              ]
-            }
-          }
-        },
         {
           "name": "Get Available Types",
           "request": {
@@ -220,9 +220,9 @@
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{base_url}}/api/materials/filter?type=silk",
+              "raw": "{{base_url}}/api/materials?type=silk",
               "host": ["{{base_url}}"],
-              "path": ["api", "materials", "filter"],
+              "path": ["api", "materials"],
               "query": [
                 { "key": "type", "value": "silk" }
               ]
