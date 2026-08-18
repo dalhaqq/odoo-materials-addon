@@ -135,4 +135,4 @@ odoo-bin -d test_db --test-tags /material -i materials --stop-after-init
 
 ## License
 
-MIT License
+LGPL-3
