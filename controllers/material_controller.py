@@ -163,6 +163,6 @@ class MaterialController(http.Controller):
     @http.route('/materials/suppliers', type='json', auth='user')
     @handle_errors
     def get_suppliers(self):
-        """List all suppliers."""
-        suppliers = request.env['res.partner'].search([])
+        """List all partners with supplier_rank > 0."""
+        suppliers = request.env['res.partner'].search([('supplier_rank', '>', 0)])
         return {'suppliers': suppliers.read(['id', 'name'])}

@@ -19,7 +19,8 @@ class TestMaterialController(HttpCase):
             'phone': '1234567890',
             'street': 'Supplier Street',
             'city': 'Supplier City',
-            'zip': '123456'
+            'zip': '123456',
+            'supplier_rank': 1,
         })
         self.material1 = self.env['materials.material'].create({
             'code': 'M001',
@@ -201,6 +202,19 @@ class TestMaterialController(HttpCase):
         self.assertGreater(len(suppliers), 0)
         self.assertIn({'id': self.supplier.id, 'name': self.supplier.name}, suppliers)
 
+    def test_get_suppliers_excludes_non_suppliers(self):
+        """Partners with supplier_rank=0 should not appear."""
+        regular = self.env['res.partner'].create({'name': 'Regular Contact', 'supplier_rank': 0})
+        self.authenticate('testuser', 'testuser')
+        response = self.url_open('/materials/suppliers', data=json.dumps({
+            'jsonrpc': '2.0',
+            'method': 'call',
+        }), headers={'Content-Type': 'application/json'})
+        result = response.json()['result']
+        supplier_ids = [s['id'] for s in result['suppliers']]
+        self.assertNotIn(regular.id, supplier_ids)
+        self.assertIn(self.supplier.id, supplier_ids)
+
     # --- Pagination tests ---
 
     def test_get_materials_pagination(self):
@@ -339,3 +353,15 @@ class TestMaterialController(HttpCase):
         result = response.json()['result']
         self.assertIn('error', result)
         self.assertIn('unique', result['error'].lower())
+
+    def test_get_materials_invalid_page(self):
+        """Invalid page param should return ValueError message."""
+        self.authenticate('testuser', 'testuser')
+        response = self.url_open('/materials', data=json.dumps({
+            'jsonrpc': '2.0',
+            'method': 'call',
+            'params': {'page': 'abc'},
+        }), headers={'Content-Type': 'application/json'})
+        result = response.json()['result']
+        self.assertIn('error', result)
+        self.assertIn('Invalid input', result['error'])

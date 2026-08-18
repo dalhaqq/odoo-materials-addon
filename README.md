@@ -103,7 +103,9 @@ Multiple types (comma-separated):
 
 ### `POST /materials/available_types` - List type options
 
-### `POST /materials/suppliers` - List all suppliers
+### `POST /materials/suppliers` - List suppliers
+
+Returns partners with `supplier_rank > 0` (Odoo built-in supplier flag).
 
 ## Error Responses
 

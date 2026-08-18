@@ -12,7 +12,8 @@ class TestMaterial(TransactionCase):
             'phone': '1234567890',
             'street': 'Supplier Street',
             'city': 'Supplier City',
-            'zip': '123456'
+            'zip': '123456',
+            'supplier_rank': 1,
         })
         self.material1 = self.env['materials.material'].create({
             'code': 'M001',
@@ -38,7 +39,7 @@ class TestMaterial(TransactionCase):
     def test_filter_materials(self):
         materials = self.env['materials.material'].search([('type', '=', 'fabric')])
         self.assertEqual(len(materials), 1)
-        self.assertEqual(materials.code, 'M001')
+        self.assertEqual(materials[0].code, 'M001')
 
     def test_create_material(self):
         material = self.env['materials.material'].create({
@@ -147,3 +148,12 @@ class TestMaterial(TransactionCase):
         self.assertEqual(copy1.code, 'M001 (1)')
         copy2 = copy1.copy()
         self.assertEqual(copy2.code, 'M001 (2)')
+
+    def test_partner_supplier_rank_default_zero(self):
+        """New partner should have supplier_rank=0 by default."""
+        partner = self.env['res.partner'].create({'name': 'Regular Partner'})
+        self.assertEqual(partner.supplier_rank, 0)
+
+    def test_partner_supplier_rank_positive(self):
+        """Supplier should have supplier_rank > 0."""
+        self.assertGreater(self.supplier.supplier_rank, 0)
