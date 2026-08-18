@@ -1,38 +1,136 @@
-# Odoo Material Management Module
+# Materials Management - Odoo 14 Module
 
-## Overview
-This Odoo 14 module allows users to register materials to be sold with the following attributes:
-- Material Code
-- Material Name
-- Material Type (Fabric, Jeans, Cotton)
-- Material Buy Price
-- Related Supplier
+REST API module for managing materials (fabric, jeans, cotton) with supplier associations.
 
 ## Requirements
+
 - Odoo 14
-- `contacts` module
 
 ## Installation
-1. Clone the repository into your Odoo addons directory:
- ```sh
- git clone https://github.com/dalhaqq/odoo-materials-addon.git /path/to/odoo/addons/materials
- ```
-2. Restart Odoo and update the module list
-3. Install the module "Materials" from the Odoo Apps menu
 
-## Usage
-API endpoints are available to manage materials and suppliers. The following endpoints are available:
+```sh
+git clone https://github.com/dalhaqq/odoo-materials-addon.git /path/to/odoo/addons/materials
+```
 
-| Endpoint                     |Description|Example|
-|------------------------------|-------------------------|-------------------------------------------------------------------------------------------------|
-| `/materials`                 | Get all materials ||
-| `/materials/<id>`            | Get a material by ID ||
-| `/materials/filter`          | Filter materials by type | `{ "type": "fabric" }` |
-| `/materials/create`          | Create a new material | `{ "code": "M001", "name": "Material 1", "type": "fabric", "buy_price": 100, "supplier_id": 1 }` |
-| `/materials/<id>/update`     | Update a material | `{ "type": "jeans", "buy_price": 150, "supplier_id": 1 }` |
-| `/materials/<id>/delete`     | Delete a material ||
-| `/materials/available_types` | Get all available material types ||
-| `/materials/suppliers`       | Get all suppliers ||
+Restart Odoo, update module list, install "Materials".
+
+## Model: `materials.material`
+
+| Field | Type | Required | Notes |
+|-------|------|----------|-------|
+| `code` | Char | Yes | Unique identifier |
+| `name` | Char | Yes | Material name |
+| `type` | Selection | Yes | `fabric`, `jeans`, `cotton` |
+| `buy_price` | Float | Yes | Minimum 100 |
+| `supplier_id` | Many2one | Yes | Links to `res.partner` |
+| `active` | Boolean | - | Default `True` (soft delete) |
+
+## API Reference
+
+All endpoints use **JSON-RPC** (`type='json'`). Authenticate via session.
+
+### `POST /materials` - List all materials
+
+**Params:**
+```json
+{
+  "page": 1,
+  "limit": 20,
+  "search": "keyword",
+  "sort": "code",
+  "order": "asc"
+}
+```
+
+**Response:**
+```json
+{
+  "materials": [{"id": 1, "code": "M001", "name": "Fabric A", "type": "fabric", "buy_price": 200, "supplier_id": [1, "Supplier 1"]}],
+  "total": 10,
+  "page": 1,
+  "limit": 20,
+  "pages": 1
+}
+```
+
+### `POST /materials/filter` - Filter by type
+
+**Params:**
+```json
+{ "type": "fabric" }
+```
+
+Multiple types (comma-separated):
+```json
+{ "type": "fabric,jeans" }
+```
+
+### `POST /materials/<id>` - Get single material
+
+**Response:**
+```json
+{
+  "material": {"id": 1, "code": "M001", "name": "Fabric A", "type": "fabric", "buy_price": 200, "supplier_id": [1, "Supplier 1"]}
+}
+```
+
+### `POST /materials/create` - Create material
+
+**Params:**
+```json
+{
+  "code": "M001",
+  "name": "Fabric A",
+  "type": "fabric",
+  "buy_price": 200,
+  "supplier_id": 1
+}
+```
+
+### `POST /materials/<id>/update` - Update material
+
+**Params (partial update):**
+```json
+{ "buy_price": 300 }
+```
+
+### `POST /materials/<id>/delete` - Delete material
+
+**Response:**
+```json
+{ "message": "Material deleted successfully" }
+```
+
+### `POST /materials/available_types` - List type options
+
+### `POST /materials/suppliers` - List all suppliers
+
+## Error Responses
+
+All endpoints return errors in this format:
+```json
+{ "error": "Error message here" }
+```
+
+Common errors:
+| Error | Cause |
+|-------|-------|
+| `Missing required fields: [...]` | Required field not provided |
+| `Material Buy Price cannot be less than 100` | Price below minimum |
+| `Material Code must be unique` | Duplicate code |
+| `Material not found` | Invalid ID |
+| `Invalid material type(s): [...]` | Unknown type value |
+
+## Tests
+
+```sh
+# Run model tests
+odoo-bin -d test_db --test-tags /material -i materials --stop-after-init
+
+# Run controller tests (post-install)
+odoo-bin -d test_db --test-tags /material -i materials --stop-after-init
+```
 
 ## License
-This module is licensed under the MIT License. You are free to use, modify, and distribute this software.
+
+MIT License

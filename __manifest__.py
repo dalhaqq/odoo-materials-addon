@@ -5,7 +5,7 @@
     'website': 'https://github.com/dalhaqq/odoo-materials-addon',
     'application': True,
     'installable': True,
-    'depends': ['base', 'contacts'],
+    'depends': ['base'],
     'summary': 'Materials Management',
     'category': 'Inventory',
     'data': [

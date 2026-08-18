@@ -85,5 +85,5 @@ erDiagram
 
 | Group | Read | Write | Create | Delete |
 |-------|------|-------|--------|--------|
-| Internal User (`base.group_user`) | ✅ | ❌ | ❌ | ❌ |
-| Settings Manager (`base.group_system`) | ✅ | ✅ | ✅ | ✅ |
+| Internal User (`base.group_user`) | Yes | - | - | - |
+| Settings Manager (`base.group_system`) | Yes | Yes | Yes | Yes |
