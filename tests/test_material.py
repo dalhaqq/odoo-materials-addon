@@ -13,7 +13,7 @@ class TestMaterial(TransactionCase):
             'street': 'Supplier Street',
             'city': 'Supplier City',
             'zip': '123456',
-            'supplier_rank': 1,
+            'is_supplier': True,
         })
         self.material1 = self.env['materials.material'].create({
             'code': 'M001',
@@ -149,11 +149,11 @@ class TestMaterial(TransactionCase):
         copy2 = copy1.copy()
         self.assertEqual(copy2.code, 'M001 (2)')
 
-    def test_partner_supplier_rank_default_zero(self):
-        """New partner should have supplier_rank=0 by default."""
+    def test_partner_is_supplier_default_false(self):
+        """New partner should have is_supplier=False by default."""
         partner = self.env['res.partner'].create({'name': 'Regular Partner'})
-        self.assertEqual(partner.supplier_rank, 0)
+        self.assertFalse(partner.is_supplier)
 
-    def test_partner_supplier_rank_positive(self):
-        """Supplier should have supplier_rank > 0."""
-        self.assertGreater(self.supplier.supplier_rank, 0)
+    def test_partner_is_supplier_flag(self):
+        """Supplier should have is_supplier=True."""
+        self.assertTrue(self.supplier.is_supplier)

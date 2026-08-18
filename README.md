@@ -27,19 +27,13 @@ Restart Odoo, update module list, install "Materials".
 
 ## API Reference
 
-All endpoints use **JSON-RPC** (`type='json'`). Authenticate via session.
+REST API using proper HTTP methods. Authenticate via session.
 
-### `POST /materials` - List all materials
+### GET /api/materials - List all materials
 
-**Params:**
-```json
-{
-  "page": 1,
-  "limit": 20,
-  "search": "keyword",
-  "sort": "code",
-  "order": "asc"
-}
+**Query Params:**
+```
+?page=1&limit=20&search=keyword&sort=code&order=asc
 ```
 
 **Response:**
@@ -53,30 +47,24 @@ All endpoints use **JSON-RPC** (`type='json'`). Authenticate via session.
 }
 ```
 
-### `POST /materials/filter` - Filter by type
+### GET /api/materials/filter - Filter by type
 
-**Params:**
-```json
-{ "type": "fabric" }
+```
+GET /api/materials/filter?type=fabric
+GET /api/materials/filter?type=fabric,jeans
 ```
 
-Multiple types (comma-separated):
-```json
-{ "type": "fabric,jeans" }
-```
+### GET /api/materials/<id> - Get single material
 
-### `POST /materials/<id>` - Get single material
-
-**Response:**
 ```json
 {
   "material": {"id": 1, "code": "M001", "name": "Fabric A", "type": "fabric", "buy_price": 200, "supplier_id": [1, "Supplier 1"]}
 }
 ```
 
-### `POST /materials/create` - Create material
+### POST /api/materials - Create material
 
-**Params:**
+**Body:**
 ```json
 {
   "code": "M001",
@@ -87,49 +75,45 @@ Multiple types (comma-separated):
 }
 ```
 
-### `POST /materials/<id>/update` - Update material
+### PATCH /api/materials/<id> - Update material
 
-**Params (partial update):**
+**Body (partial update):**
 ```json
-{ "buy_price": 300 }
+{"buy_price": 300}
 ```
 
-### `POST /materials/<id>/delete` - Delete material
+### DELETE /api/materials/<id> - Delete material
 
 **Response:**
 ```json
-{ "message": "Material deleted successfully" }
+{"message": "Material deleted successfully"}
 ```
 
-### `POST /materials/available_types` - List type options
+### GET /api/materials/available_types - List type options
 
-### `POST /materials/suppliers` - List suppliers
+### GET /api/materials/suppliers - List suppliers
 
-Returns partners with `supplier_rank > 0` (Odoo built-in supplier flag).
+Returns partners with `is_supplier=True`.
 
 ## Error Responses
 
 All endpoints return errors in this format:
 ```json
-{ "error": "Error message here" }
+{"error": "Error message here"}
 ```
 
 Common errors:
-| Error | Cause |
-|-------|-------|
-| `Missing required fields: [...]` | Required field not provided |
-| `Material Buy Price cannot be less than 100` | Price below minimum |
-| `Material Code must be unique` | Duplicate code |
-| `Material not found` | Invalid ID |
-| `Invalid material type(s): [...]` | Unknown type value |
+| Status | Error | Cause |
+|--------|-------|-------|
+| 400 | `Missing required fields: [...]` | Required field not provided |
+| 400 | `Material Buy Price cannot be less than 100` | Price below minimum |
+| 400 | `Material Code must be unique` | Duplicate code |
+| 404 | `Material not found` | Invalid ID |
+| 400 | `Invalid material type(s): [...]` | Unknown type value |
 
 ## Tests
 
 ```sh
-# Run model tests
-odoo-bin -d test_db --test-tags /material -i materials --stop-after-init
-
-# Run controller tests (post-install)
 odoo-bin -d test_db --test-tags /material -i materials --stop-after-init
 ```
 

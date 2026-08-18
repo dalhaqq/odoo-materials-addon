@@ -20,7 +20,7 @@ class TestMaterialController(HttpCase):
             'street': 'Supplier Street',
             'city': 'Supplier City',
             'zip': '123456',
-            'supplier_rank': 1,
+            'is_supplier': True,
         })
         self.material1 = self.env['materials.material'].create({
             'code': 'M001',
@@ -37,13 +37,10 @@ class TestMaterialController(HttpCase):
             'supplier_id': self.supplier.id
         })
 
-    def test_get_materials(self):
+    def test_list_materials(self):
         self.authenticate('testuser', 'testuser')
-        response = self.url_open('/materials', data=json.dumps({
-            'jsonrpc': '2.0',
-            'method': 'call',
-        }), headers={'Content-Type': 'application/json'})
-        result = response.json()['result']
+        response = self.url_open('/api/materials?page=1&limit=20&sort=code&order=asc')
+        result = json.loads(response.text)
         self.assertNotIn('error', result)
         self.assertIn('materials', result)
         self.assertIn('total', result)
@@ -55,14 +52,8 @@ class TestMaterialController(HttpCase):
 
     def test_filter_materials(self):
         self.authenticate('testuser', 'testuser')
-        response = self.url_open('/materials/filter', data=json.dumps({
-            'jsonrpc': '2.0',
-            'method': 'call',
-            'params': {
-                'type': 'fabric'
-            },
-        }), headers={'Content-Type': 'application/json'})
-        result = response.json()['result']
+        response = self.url_open('/api/materials/filter?type=fabric')
+        result = json.loads(response.text)
         self.assertNotIn('error', result)
         self.assertIn('materials', result)
         self.assertEqual(result['total'], 1)
@@ -73,11 +64,8 @@ class TestMaterialController(HttpCase):
 
     def test_get_material_by_id(self):
         self.authenticate('testuser', 'testuser')
-        response = self.url_open(f'/materials/{self.material1.id}', data=json.dumps({
-            'jsonrpc': '2.0',
-            'method': 'call',
-        }), headers={'Content-Type': 'application/json'})
-        result = response.json()['result']
+        response = self.url_open(f'/api/materials/{self.material1.id}')
+        result = json.loads(response.text)
         self.assertNotIn('error', result)
         self.assertIn('material', result)
         material = result['material']
@@ -93,12 +81,9 @@ class TestMaterialController(HttpCase):
             'buy_price': 50,
             'supplier_id': self.supplier.id
         }
-        response = self.url_open('/materials/create', data=json.dumps({
-            'jsonrpc': '2.0',
-            'method': 'call',
-            'params': new_material
-        }), headers={'Content-Type': 'application/json'})
-        result = response.json()['result']
+        response = self.url_open('/api/materials', data=json.dumps(new_material),
+                                 headers={'Content-Type': 'application/json'})
+        result = json.loads(response.text)
         self.assertIn('error', result)
         self.assertIn('Material Buy Price cannot be less than 100', result['error'])
 
@@ -111,12 +96,9 @@ class TestMaterialController(HttpCase):
             'buy_price': 250,
             'supplier_id': self.supplier.id
         }
-        response = self.url_open('/materials/create', data=json.dumps({
-            'jsonrpc': '2.0',
-            'method': 'call',
-            'params': new_material,
-        }), headers={'Content-Type': 'application/json'})
-        result = response.json()['result']
+        response = self.url_open('/api/materials', data=json.dumps(new_material),
+                                 headers={'Content-Type': 'application/json'})
+        result = json.loads(response.text)
         self.assertNotIn('error', result)
         self.assertIn('material', result)
         material = result['material'][0]
@@ -128,25 +110,21 @@ class TestMaterialController(HttpCase):
 
     def test_update_material_not_found(self):
         self.authenticate('testuser', 'testuser')
-        response = self.url_open(f'/materials/100/update', data=json.dumps({
-            'jsonrpc': '2.0',
-            'method': 'call',
-            'params': {'buy_price': 300},
-            'material_id': 100,
-        }), headers={'Content-Type': 'application/json'})
-        result = response.json()['result']
+        response = self.url_open(f'/api/materials/100',
+                                 data=json.dumps({'buy_price': 300}),
+                                 headers={'Content-Type': 'application/json'},
+                                 method='PATCH')
+        result = json.loads(response.text)
         self.assertIn('error', result)
         self.assertIn('Material not found', result['error'])
 
     def test_update_material(self):
         self.authenticate('testuser', 'testuser')
-        response = self.url_open(f'/materials/{self.material1.id}/update', data=json.dumps({
-            'jsonrpc': '2.0',
-            'method': 'call',
-            'params': {'buy_price': 300},
-            'material_id': self.material1.id,
-        }), headers={'Content-Type': 'application/json'})
-        result = response.json()['result']
+        response = self.url_open(f'/api/materials/{self.material1.id}',
+                                 data=json.dumps({'buy_price': 300}),
+                                 headers={'Content-Type': 'application/json'},
+                                 method='PATCH')
+        result = json.loads(response.text)
         self.assertNotIn('error', result)
         self.assertIn('material', result)
         self.assertGreater(len(result['material']), 0)
@@ -154,33 +132,25 @@ class TestMaterialController(HttpCase):
 
     def test_delete_material_not_found(self):
         self.authenticate('testuser', 'testuser')
-        response = self.url_open(f'/materials/100/delete', data=json.dumps({
-            'jsonrpc': '2.0',
-            'method': 'call',
-            'params': {},
-        }), headers={'Content-Type': 'application/json'})
-        result = response.json()['result']
+        response = self.url_open(f'/api/materials/100',
+                                 method='DELETE')
+        result = json.loads(response.text)
         self.assertIn('error', result)
         self.assertIn('Material not found', result['error'])
 
     def test_delete_material(self):
         self.authenticate('testuser', 'testuser')
-        response = self.url_open(f'/materials/{self.material1.id}/delete', data=json.dumps({
-            'jsonrpc': '2.0',
-            'method': 'call',
-        }), headers={'Content-Type': 'application/json'})
-        result = response.json()['result']
+        response = self.url_open(f'/api/materials/{self.material1.id}',
+                                 method='DELETE')
+        result = json.loads(response.text)
         self.assertNotIn('error', result)
         self.assertIn('message', result)
         self.assertIn('Material deleted successfully', result['message'])
 
     def test_get_available_types(self):
         self.authenticate('testuser', 'testuser')
-        response = self.url_open('/materials/available_types', data=json.dumps({
-            'jsonrpc': '2.0',
-            'method': 'call',
-        }), headers={'Content-Type': 'application/json'})
-        result = response.json()['result']
+        response = self.url_open('/api/materials/available_types')
+        result = json.loads(response.text)
         self.assertNotIn('error', result)
         self.assertIn('types', result)
         types = result['types']
@@ -191,11 +161,8 @@ class TestMaterialController(HttpCase):
 
     def test_get_available_suppliers(self):
         self.authenticate('testuser', 'testuser')
-        response = self.url_open('/materials/suppliers', data=json.dumps({
-            'jsonrpc': '2.0',
-            'method': 'call',
-        }), headers={'Content-Type': 'application/json'})
-        result = response.json()['result']
+        response = self.url_open('/api/materials/suppliers')
+        result = json.loads(response.text)
         self.assertNotIn('error', result)
         self.assertIn('suppliers', result)
         suppliers = result['suppliers']
@@ -203,28 +170,21 @@ class TestMaterialController(HttpCase):
         self.assertIn({'id': self.supplier.id, 'name': self.supplier.name}, suppliers)
 
     def test_get_suppliers_excludes_non_suppliers(self):
-        """Partners with supplier_rank=0 should not appear."""
-        regular = self.env['res.partner'].create({'name': 'Regular Contact', 'supplier_rank': 0})
+        """Partners with is_supplier=False should not appear."""
+        regular = self.env['res.partner'].create({'name': 'Regular Contact', 'is_supplier': False})
         self.authenticate('testuser', 'testuser')
-        response = self.url_open('/materials/suppliers', data=json.dumps({
-            'jsonrpc': '2.0',
-            'method': 'call',
-        }), headers={'Content-Type': 'application/json'})
-        result = response.json()['result']
+        response = self.url_open('/api/materials/suppliers')
+        result = json.loads(response.text)
         supplier_ids = [s['id'] for s in result['suppliers']]
         self.assertNotIn(regular.id, supplier_ids)
         self.assertIn(self.supplier.id, supplier_ids)
 
     # --- Pagination tests ---
 
-    def test_get_materials_pagination(self):
+    def test_list_materials_pagination(self):
         self.authenticate('testuser', 'testuser')
-        response = self.url_open('/materials', data=json.dumps({
-            'jsonrpc': '2.0',
-            'method': 'call',
-            'params': {'page': 1, 'limit': 1},
-        }), headers={'Content-Type': 'application/json'})
-        result = response.json()['result']
+        response = self.url_open('/api/materials?page=1&limit=1')
+        result = json.loads(response.text)
         self.assertNotIn('error', result)
         self.assertEqual(len(result['materials']), 1)
         self.assertEqual(result['total'], 2)
@@ -232,14 +192,10 @@ class TestMaterialController(HttpCase):
         self.assertEqual(result['limit'], 1)
         self.assertEqual(result['pages'], 2)
 
-    def test_get_materials_pagination_page2(self):
+    def test_list_materials_pagination_page2(self):
         self.authenticate('testuser', 'testuser')
-        response = self.url_open('/materials', data=json.dumps({
-            'jsonrpc': '2.0',
-            'method': 'call',
-            'params': {'page': 2, 'limit': 1},
-        }), headers={'Content-Type': 'application/json'})
-        result = response.json()['result']
+        response = self.url_open('/api/materials?page=2&limit=1')
+        result = json.loads(response.text)
         self.assertNotIn('error', result)
         self.assertEqual(len(result['materials']), 1)
         # Ordered by code asc, page 2 = M002
@@ -249,24 +205,16 @@ class TestMaterialController(HttpCase):
 
     def test_search_materials_by_name(self):
         self.authenticate('testuser', 'testuser')
-        response = self.url_open('/materials', data=json.dumps({
-            'jsonrpc': '2.0',
-            'method': 'call',
-            'params': {'search': 'Material 1'},
-        }), headers={'Content-Type': 'application/json'})
-        result = response.json()['result']
+        response = self.url_open('/api/materials?search=Material+1')
+        result = json.loads(response.text)
         self.assertNotIn('error', result)
         self.assertEqual(result['total'], 1)
         self.assertEqual(result['materials'][0]['code'], 'M001')
 
     def test_search_materials_by_code(self):
         self.authenticate('testuser', 'testuser')
-        response = self.url_open('/materials', data=json.dumps({
-            'jsonrpc': '2.0',
-            'method': 'call',
-            'params': {'search': 'M002'},
-        }), headers={'Content-Type': 'application/json'})
-        result = response.json()['result']
+        response = self.url_open('/api/materials?search=M002')
+        result = json.loads(response.text)
         self.assertNotIn('error', result)
         self.assertEqual(result['total'], 1)
         self.assertEqual(result['materials'][0]['code'], 'M002')
@@ -275,12 +223,8 @@ class TestMaterialController(HttpCase):
 
     def test_sort_materials_by_price_desc(self):
         self.authenticate('testuser', 'testuser')
-        response = self.url_open('/materials', data=json.dumps({
-            'jsonrpc': '2.0',
-            'method': 'call',
-            'params': {'sort': 'buy_price', 'order': 'desc'},
-        }), headers={'Content-Type': 'application/json'})
-        result = response.json()['result']
+        response = self.url_open('/api/materials?sort=buy_price&order=desc')
+        result = json.loads(response.text)
         self.assertNotIn('error', result)
         # material1 buy_price=200, material2 buy_price=150 => desc = [200, 150]
         self.assertEqual(result['materials'][0]['buy_price'], 200)
@@ -290,12 +234,8 @@ class TestMaterialController(HttpCase):
 
     def test_filter_materials_multiple_types(self):
         self.authenticate('testuser', 'testuser')
-        response = self.url_open('/materials/filter', data=json.dumps({
-            'jsonrpc': '2.0',
-            'method': 'call',
-            'params': {'type': 'fabric,jeans'},
-        }), headers={'Content-Type': 'application/json'})
-        result = response.json()['result']
+        response = self.url_open('/api/materials/filter?type=fabric,jeans')
+        result = json.loads(response.text)
         self.assertNotIn('error', result)
         self.assertEqual(result['total'], 2)
         codes = [m['code'] for m in result['materials']]
@@ -304,23 +244,15 @@ class TestMaterialController(HttpCase):
 
     def test_filter_materials_invalid_type(self):
         self.authenticate('testuser', 'testuser')
-        response = self.url_open('/materials/filter', data=json.dumps({
-            'jsonrpc': '2.0',
-            'method': 'call',
-            'params': {'type': 'silk'},
-        }), headers={'Content-Type': 'application/json'})
-        result = response.json()['result']
+        response = self.url_open('/api/materials/filter?type=silk')
+        result = json.loads(response.text)
         self.assertIn('error', result)
         self.assertIn('Invalid material type', result['error'])
 
     def test_filter_materials_missing_type(self):
         self.authenticate('testuser', 'testuser')
-        response = self.url_open('/materials/filter', data=json.dumps({
-            'jsonrpc': '2.0',
-            'method': 'call',
-            'params': {},
-        }), headers={'Content-Type': 'application/json'})
-        result = response.json()['result']
+        response = self.url_open('/api/materials/filter')
+        result = json.loads(response.text)
         self.assertIn('error', result)
         self.assertIn('Material type is required', result['error'])
 
@@ -328,40 +260,32 @@ class TestMaterialController(HttpCase):
 
     def test_create_material_missing_fields(self):
         self.authenticate('testuser', 'testuser')
-        response = self.url_open('/materials/create', data=json.dumps({
-            'jsonrpc': '2.0',
-            'method': 'call',
-            'params': {'code': 'M099'},
-        }), headers={'Content-Type': 'application/json'})
-        result = response.json()['result']
+        response = self.url_open('/api/materials',
+                                 data=json.dumps({'code': 'M099'}),
+                                 headers={'Content-Type': 'application/json'})
+        result = json.loads(response.text)
         self.assertIn('error', result)
         self.assertIn('Missing required fields', result['error'])
 
     def test_create_material_duplicate_code(self):
         self.authenticate('testuser', 'testuser')
-        response = self.url_open('/materials/create', data=json.dumps({
-            'jsonrpc': '2.0',
-            'method': 'call',
-            'params': {
-                'code': 'M001',
-                'name': 'Dupe',
-                'type': 'cotton',
-                'buy_price': 200,
-                'supplier_id': self.supplier.id,
-            },
-        }), headers={'Content-Type': 'application/json'})
-        result = response.json()['result']
+        response = self.url_open('/api/materials',
+                                 data=json.dumps({
+                                     'code': 'M001',
+                                     'name': 'Dupe',
+                                     'type': 'cotton',
+                                     'buy_price': 200,
+                                     'supplier_id': self.supplier.id,
+                                 }),
+                                 headers={'Content-Type': 'application/json'})
+        result = json.loads(response.text)
         self.assertIn('error', result)
         self.assertIn('unique', result['error'].lower())
 
-    def test_get_materials_invalid_page(self):
+    def test_list_materials_invalid_page(self):
         """Invalid page param should return ValueError message."""
         self.authenticate('testuser', 'testuser')
-        response = self.url_open('/materials', data=json.dumps({
-            'jsonrpc': '2.0',
-            'method': 'call',
-            'params': {'page': 'abc'},
-        }), headers={'Content-Type': 'application/json'})
-        result = response.json()['result']
+        response = self.url_open('/api/materials?page=abc')
+        result = json.loads(response.text)
         self.assertIn('error', result)
         self.assertIn('Invalid input', result['error'])

@@ -1,5 +1,9 @@
+import json
 import logging
 from functools import wraps
+
+from werkzeug.wrappers import Response
+
 from odoo import http
 from odoo.http import request
 from odoo.exceptions import AccessError, ValidationError
@@ -11,25 +15,35 @@ MATERIAL_FIELDS = ['id', 'code', 'name', 'type', 'buy_price', 'supplier_id']
 VALID_SORT_FIELDS = {'code', 'name', 'buy_price', 'type'}
 
 
+def _json_response(data, status=200):
+    """Create a JSON response with proper status code."""
+    return Response(
+        status=status,
+        content_type='application/json; charset=utf-8',
+        response=json.dumps(data, default=str),
+    )
+
+
 def handle_errors(func):
-    """Decorator that catches exceptions and returns error dict.
-    
-    - ValidationError, ValueError, AccessError: returns message to user
-    - Other exceptions: logs error, returns generic message
+    """Decorator that catches exceptions and returns JSON error responses.
+
+    - ValidationError, ValueError: shows message to user (client error)
+    - AccessError: shows permission denied (403)
+    - Other exceptions: logs error, returns generic message (500)
     """
     @wraps(func)
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
         except ValidationError as e:
-            return {'error': str(e)}
+            return _json_response({'error': str(e)}, status=400)
         except ValueError as e:
-            return {'error': f'Invalid input: {e}'}
+            return _json_response({'error': f'Invalid input: {e}'}, status=400)
         except AccessError:
-            return {'error': 'Permission denied'}
+            return _json_response({'error': 'Permission denied'}, status=403)
         except Exception as e:
             _logger.exception('Unexpected error in %s', func.__name__)
-            return {'error': 'Internal server error'}
+            return _json_response({'error': 'Internal server error'}, status=500)
     return wrapper
 
 
@@ -64,9 +78,9 @@ def _parse_pagination(kwargs):
 
 class MaterialController(http.Controller):
 
-    @http.route('/materials', type='json', auth='user')
+    @http.route('/api/materials', type='http', auth='user', methods=['GET'], csrf=False)
     @handle_errors
-    def get_materials(self, **kwargs):
+    def list_materials(self, **kwargs):
         """List materials with pagination, search, and sorting."""
         page, limit, order = _parse_pagination(kwargs)
         search = kwargs.get('search', '').strip()
@@ -78,27 +92,30 @@ class MaterialController(http.Controller):
         materials, total = _paginate(
             request.env, 'materials.material', domain, page, limit, order
         )
-        return {
+        return _json_response({
             'materials': materials.read(MATERIAL_FIELDS),
             'total': total,
             'page': page,
             'limit': limit,
             'pages': (total + limit - 1) // limit if limit else 1,
-        }
+        })
 
-    @http.route('/materials/filter', type='json', auth='user')
+    @http.route('/api/materials/filter', type='http', auth='user', methods=['GET'], csrf=False)
     @handle_errors
     def filter_materials(self, **kwargs):
         """Filter materials by type (comma-separated for multiple)."""
         material_type = kwargs.get('type')
         if not material_type:
-            return {'error': 'Material type is required'}
+            return _json_response({'error': 'Material type is required'}, status=400)
 
         valid_types = [t[0] for t in request.env['materials.material'].get_available_types()]
         types = [t.strip() for t in material_type.split(',') if t.strip()]
         invalid = [t for t in types if t not in valid_types]
         if invalid:
-            return {'error': f'Invalid material type(s): {invalid}. Must be one of: {valid_types}'}
+            return _json_response(
+                {'error': f'Invalid material type(s): {invalid}. Must be one of: {valid_types}'},
+                status=400,
+            )
 
         page, limit, order = _parse_pagination(kwargs)
         domain = [('active', '=', True), ('type', 'in', types)]
@@ -106,63 +123,63 @@ class MaterialController(http.Controller):
         materials, total = _paginate(
             request.env, 'materials.material', domain, page, limit, order
         )
-        return {
+        return _json_response({
             'materials': materials.read(MATERIAL_FIELDS),
             'total': total,
             'page': page,
             'limit': limit,
-        }
+        })
 
-    @http.route('/materials/<int:material_id>', type='json', auth='user')
+    @http.route('/api/materials/<int:material_id>', type='http', auth='user', methods=['GET'], csrf=False)
     @handle_errors
     def get_material(self, material_id):
         """Get a single material by ID."""
         material = request.env['materials.material'].get_by_id(material_id)
         if not material:
-            return {'error': 'Material not found'}
-        return {'material': material.read(MATERIAL_FIELDS)[0]}
+            return _json_response({'error': 'Material not found'}, status=404)
+        return _json_response({'material': material.read(MATERIAL_FIELDS)[0]})
 
-    @http.route('/materials/create', type='json', auth='user')
+    @http.route('/api/materials', type='http', auth='user', methods=['POST'], csrf=False)
     @handle_errors
     def create_material(self, **kwargs):
         """Create a new material. Required: code, name, type, buy_price, supplier_id."""
         required_fields = ['code', 'name', 'type', 'buy_price', 'supplier_id']
         missing = [f for f in required_fields if f not in kwargs or not kwargs[f]]
         if missing:
-            return {'error': f'Missing required fields: {missing}'}
+            return _json_response({'error': f'Missing required fields: {missing}'}, status=400)
 
         material = request.env['materials.material'].create(kwargs)
-        return {'material': material.read(MATERIAL_FIELDS)}
+        return _json_response({'material': material.read(MATERIAL_FIELDS)}, status=201)
 
-    @http.route('/materials/<int:material_id>/update', type='json', auth='user')
+    @http.route('/api/materials/<int:material_id>', type='http', auth='user', methods=['PATCH'], csrf=False)
     @handle_errors
     def update_material(self, material_id, **kwargs):
         """Update an existing material (partial update)."""
         material = request.env['materials.material'].get_by_id(material_id)
         if not material:
-            return {'error': 'Material not found'}
+            return _json_response({'error': 'Material not found'}, status=404)
         material.write(kwargs)
-        return {'material': material.read(MATERIAL_FIELDS)}
+        return _json_response({'material': material.read(MATERIAL_FIELDS)})
 
-    @http.route('/materials/<int:material_id>/delete', type='json', auth='user')
+    @http.route('/api/materials/<int:material_id>', type='http', auth='user', methods=['DELETE'], csrf=False)
     @handle_errors
     def delete_material(self, material_id):
         """Delete a material."""
         material = request.env['materials.material'].get_by_id(material_id)
         if not material:
-            return {'error': 'Material not found'}
+            return _json_response({'error': 'Material not found'}, status=404)
         material.unlink()
-        return {'message': 'Material deleted successfully'}
+        return _json_response({'message': 'Material deleted successfully'})
 
-    @http.route('/materials/available_types', type='json', auth='user')
+    @http.route('/api/materials/available_types', type='http', auth='user', methods=['GET'], csrf=False)
     @handle_errors
     def get_available_types(self):
         """List available material types."""
-        return {'types': request.env['materials.material'].get_available_types()}
+        return _json_response({'types': request.env['materials.material'].get_available_types()})
 
-    @http.route('/materials/suppliers', type='json', auth='user')
+    @http.route('/api/materials/suppliers', type='http', auth='user', methods=['GET'], csrf=False)
     @handle_errors
     def get_suppliers(self):
-        """List all partners with supplier_rank > 0."""
-        suppliers = request.env['res.partner'].search([('supplier_rank', '>', 0)])
-        return {'suppliers': suppliers.read(['id', 'name'])}
+        """List all partners flagged as suppliers."""
+        suppliers = request.env['res.partner'].search([('is_supplier', '=', True)])
+        return _json_response({'suppliers': suppliers.read(['id', 'name'])})

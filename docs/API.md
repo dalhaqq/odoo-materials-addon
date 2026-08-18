@@ -1,16 +1,16 @@
 # Materials API Reference
 
-All endpoints use **JSON-RPC** over HTTP POST. Authenticate via Odoo session cookie.
+REST API using proper HTTP methods. Authenticate via Odoo session cookie.
 
-Base URL: `http://<odoo-host>/materials`
+Base URL: `http://<odoo-host>`
 
 ---
 
-## POST /materials
+## GET /api/materials
 
 List all active materials with pagination, search, and sorting.
 
-**Params:**
+**Query Params:**
 
 | Param | Type | Default | Description |
 |-------|------|---------|-------------|
@@ -22,21 +22,11 @@ List all active materials with pagination, search, and sorting.
 
 **Example Request:**
 
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "call",
-  "params": {
-    "page": 1,
-    "limit": 10,
-    "search": "fabric",
-    "sort": "buy_price",
-    "order": "desc"
-  }
-}
+```
+GET /api/materials?page=1&limit=10&search=fabric&sort=buy_price&order=desc
 ```
 
-**Response:**
+**Response (200):**
 
 ```json
 {
@@ -59,11 +49,11 @@ List all active materials with pagination, search, and sorting.
 
 ---
 
-## POST /materials/filter
+## GET /api/materials/filter
 
 Filter materials by type (single or multiple).
 
-**Params:**
+**Query Params:**
 
 | Param | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -77,17 +67,11 @@ Valid types: `fabric`, `jeans`, `cotton`
 
 **Example Request:**
 
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "call",
-  "params": {
-    "type": "fabric,jeans"
-  }
-}
+```
+GET /api/materials/filter?type=fabric,jeans
 ```
 
-**Response:**
+**Response (200):**
 
 ```json
 {
@@ -100,27 +84,24 @@ Valid types: `fabric`, `jeans`, `cotton`
 
 **Errors:**
 
-| Error | Cause |
-|-------|-------|
-| `Material type is required` | `type` param missing |
-| `Invalid material type(s): [...]` | Unknown type value |
+| Status | Error | Cause |
+|--------|-------|-------|
+| 400 | `Material type is required` | `type` param missing |
+| 400 | `Invalid material type(s): [...]` | Unknown type value |
 
 ---
 
-## POST /materials/<id>
+## GET /api/materials/<id>
 
 Get a single material by ID.
 
 **Example Request:**
 
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "call"
-}
+```
+GET /api/materials/1
 ```
 
-**Response:**
+**Response (200):**
 
 ```json
 {
@@ -137,17 +118,17 @@ Get a single material by ID.
 
 **Errors:**
 
-| Error | Cause |
-|-------|-------|
-| `Material not found` | Invalid material ID |
+| Status | Error | Cause |
+|--------|-------|-------|
+| 404 | `Material not found` | Invalid material ID |
 
 ---
 
-## POST /materials/create
+## POST /api/materials
 
 Create a new material.
 
-**Required Fields:**
+**Required Fields (JSON body):**
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -159,21 +140,20 @@ Create a new material.
 
 **Example Request:**
 
-```json
+```
+POST /api/materials
+Content-Type: application/json
+
 {
-  "jsonrpc": "2.0",
-  "method": "call",
-  "params": {
-    "code": "M001",
-    "name": "Premium Fabric",
-    "type": "fabric",
-    "buy_price": 250,
-    "supplier_id": 1
-  }
+  "code": "M001",
+  "name": "Premium Fabric",
+  "type": "fabric",
+  "buy_price": 250,
+  "supplier_id": 1
 }
 ```
 
-**Response:**
+**Response (201):**
 
 ```json
 {
@@ -192,34 +172,33 @@ Create a new material.
 
 **Errors:**
 
-| Error | Cause |
-|-------|-------|
-| `Missing required fields: [...]` | Required field not provided |
-| `Material Buy Price cannot be less than 100` | Price below minimum |
-| `Material Code must be unique` | Duplicate code |
+| Status | Error | Cause |
+|--------|-------|-------|
+| 400 | `Missing required fields: [...]` | Required field not provided |
+| 400 | `Material Buy Price cannot be less than 100` | Price below minimum |
+| 400 | `Material Code must be unique` | Duplicate code |
 
 ---
 
-## POST /materials/<id>/update
+## PATCH /api/materials/<id>
 
 Update an existing material (partial update).
 
-**Params:** Send only fields to change.
+**Body:** Send only fields to change.
 
 **Example Request:**
 
-```json
+```
+PATCH /api/materials/1
+Content-Type: application/json
+
 {
-  "jsonrpc": "2.0",
-  "method": "call",
-  "params": {
-    "buy_price": 300,
-    "name": "Updated Name"
-  }
+  "buy_price": 300,
+  "name": "Updated Name"
 }
 ```
 
-**Response:**
+**Response (200):**
 
 ```json
 {
@@ -238,27 +217,24 @@ Update an existing material (partial update).
 
 **Errors:**
 
-| Error | Cause |
-|-------|-------|
-| `Material not found` | Invalid material ID |
-| `Material Buy Price cannot be less than 100` | Price below minimum |
+| Status | Error | Cause |
+|--------|-------|-------|
+| 404 | `Material not found` | Invalid material ID |
+| 400 | `Material Buy Price cannot be less than 100` | Price below minimum |
 
 ---
 
-## POST /materials/<id>/delete
+## DELETE /api/materials/<id>
 
 Delete a material.
 
 **Example Request:**
 
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "call"
-}
+```
+DELETE /api/materials/1
 ```
 
-**Response:**
+**Response (200):**
 
 ```json
 {
@@ -268,17 +244,17 @@ Delete a material.
 
 **Errors:**
 
-| Error | Cause |
-|-------|-------|
-| `Material not found` | Invalid material ID |
+| Status | Error | Cause |
+|--------|-------|-------|
+| 404 | `Material not found` | Invalid material ID |
 
 ---
 
-## POST /materials/available_types
+## GET /api/materials/available_types
 
 Get all available material type options.
 
-**Response:**
+**Response (200):**
 
 ```json
 {
@@ -292,11 +268,11 @@ Get all available material type options.
 
 ---
 
-## POST /materials/suppliers
+## GET /api/materials/suppliers
 
 Get all available suppliers.
 
-**Response:**
+**Response (200):**
 
 ```json
 {
