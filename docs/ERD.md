@@ -10,11 +10,12 @@ This ERD describes the database schema for the Materials Management module in Od
 erDiagram
     MATERIALS_MATERIAL {
         int id PK
-        varchar code UK "Material Code (unique)"
+        varchar code "Material Code (unique, application-level)"
         varchar name "Material Name"
         varchar type "Material Type (fabric/jeans/cotton)"
         float buy_price "Material Buy Price (min: 100)"
         int supplier_id FK "Related Supplier"
+        boolean active "Active (soft delete)"
         datetime create_date "Created Date"
         int create_uid "Created By"
         datetime write_date "Last Modified Date"
@@ -29,6 +30,7 @@ erDiagram
         varchar street "Street"
         varchar city "City"
         varchar zip "Zip Code"
+        boolean is_supplier "Supplier Flag"
     }
 
     RES_USERS {
@@ -56,11 +58,17 @@ erDiagram
 | Field | Type | Constraints | Description |
 |-------|------|-------------|-------------|
 | `id` | Integer | Primary Key | Auto-generated record ID |
-| `code` | Char | Required, Unique | Unique material code identifier |
+| `code` | Char | Required, Unique (application-level) | Unique material code identifier |
 | `name` | Char | Required | Human-readable material name |
 | `type` | Selection | Required | Material type: fabric, jeans, or cotton |
 | `buy_price` | Float | Required, Min: 100 | Purchase price per unit |
 | `supplier_id` | Many2one | Required | Reference to supplier (res.partner) |
+
+### res.partner (extension)
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `is_supplier` | Boolean | Default: False | Flags partner as supplier for API filtering |
 
 ### Validation Rules
 
@@ -72,14 +80,13 @@ erDiagram
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `GET /materials` | Read | List all materials |
-| `GET /materials/<id>` | Read | Get single material by ID |
-| `GET /materials/filter` | Read | Filter materials by type |
-| `POST /materials/create` | Create | Create new material |
-| `POST /materials/<id>/update` | Update | Update existing material |
-| `POST /materials/<id>/delete` | Delete | Delete material |
-| `GET /materials/available_types` | Read | List available material types |
-| `GET /materials/suppliers` | Read | List all suppliers |
+| `GET /api/materials` | Read | List materials (with optional `?type=` filter) |
+| `GET /api/materials/<id>` | Read | Get single material by ID |
+| `POST /api/materials` | Create | Create new material |
+| `PATCH /api/materials/<id>` | Update | Partial update material |
+| `DELETE /api/materials/<id>` | Delete | Delete material |
+| `GET /api/materials/available_types` | Read | List available material types |
+| `GET /api/materials/suppliers` | Read | List partners with `is_supplier=True` |
 
 ## Security Model
 
