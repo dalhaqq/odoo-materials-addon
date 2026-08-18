@@ -16,6 +16,12 @@ class Material(models.Model):
     buy_price = fields.Float(string='Material Buy Price', required=True)
     supplier_id = fields.Many2one('res.partner', string='Supplier', required=True)
 
+    @api.constrains('code')
+    def _check_code_unique(self):
+        for record in self:
+            if self.search_count([('code', '=', record.code), ('id', '!=', record.id)]):
+                raise ValidationError('Material Code must be unique')
+
     @api.constrains('buy_price')
     def _check_buy_price(self):
         for record in self:

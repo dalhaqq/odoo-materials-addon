@@ -3,6 +3,9 @@ from odoo.http import request
 from odoo.exceptions import ValidationError
 
 
+MATERIAL_FIELDS = ['id', 'code', 'name', 'type', 'buy_price', 'supplier_id']
+
+
 class MaterialController(http.Controller):
 
     @http.route('/materials', type='json', auth='user')
@@ -10,7 +13,7 @@ class MaterialController(http.Controller):
         try:
             materials = request.env['materials.material'].search([])
             return {
-                'materials': materials.read(['id', 'code', 'name', 'type', 'buy_price', 'supplier_id'])
+                'materials': materials.read(MATERIAL_FIELDS)
             }
         except Exception as e:
             return {
@@ -21,9 +24,16 @@ class MaterialController(http.Controller):
     def filter_materials(self, **kwargs):
         try:
             material_type = kwargs.get('type')
+            if not material_type:
+                return {'error': 'Material type is required'}
+
+            valid_types = [t[0] for t in request.env['materials.material']._fields['type'].selection]
+            if material_type not in valid_types:
+                return {'error': f'Invalid material type. Must be one of: {valid_types}'}
+
             materials = request.env['materials.material'].search([('type', '=', material_type)])
             return {
-                'materials': materials.read(['id', 'code', 'name', 'type', 'buy_price', 'supplier_id'])
+                'materials': materials.read(MATERIAL_FIELDS)
             }
         except Exception as e:
             return {
@@ -39,7 +49,7 @@ class MaterialController(http.Controller):
                     'error': 'Material not found'
                 }
             return {
-                'material': material.read(['id', 'code', 'name', 'type', 'buy_price', 'supplier_id'])[0]
+                'material': material.read(MATERIAL_FIELDS)[0]
             }
         except Exception as e:
             return {
@@ -49,9 +59,14 @@ class MaterialController(http.Controller):
     @http.route('/materials/create', type='json', auth='user')
     def create_material(self, **kwargs):
         try:
+            required_fields = ['code', 'name', 'type', 'buy_price', 'supplier_id']
+            missing = [f for f in required_fields if f not in kwargs or not kwargs[f]]
+            if missing:
+                return {'error': f'Missing required fields: {missing}'}
+
             material = request.env['materials.material'].create(kwargs)
             return {
-                'material': material.read(['id', 'code', 'name', 'type', 'buy_price', 'supplier_id'])
+                'material': material.read(MATERIAL_FIELDS)
             }
         except ValidationError as e:
             return {
@@ -72,7 +87,7 @@ class MaterialController(http.Controller):
                 }
             material.write(kwargs)
             return {
-                'material': material.read(['id', 'code', 'name', 'type', 'buy_price', 'supplier_id'])
+                'material': material.read(MATERIAL_FIELDS)
             }
         except ValidationError as e:
             return {
@@ -102,9 +117,14 @@ class MaterialController(http.Controller):
 
     @http.route('/materials/available_types', type='json', auth='user')
     def get_available_types(self):
-        return {
-            'types': request.env['materials.material']._fields['type'].selection
-        }
+        try:
+            return {
+                'types': request.env['materials.material']._fields['type'].selection
+            }
+        except Exception as e:
+            return {
+                'error': str(e)
+            }
 
     @http.route('/materials/suppliers', type='json', auth='user')
     def get_suppliers(self):
