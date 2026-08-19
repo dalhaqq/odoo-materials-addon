@@ -99,6 +99,30 @@ class MaterialController(http.Controller):
         material.unlink()
         return _json_response({'message': 'Material deleted successfully'})
 
+    @http.route('/api/materials/<int:material_id>/archive', type='http', auth='user', methods=['POST'], csrf=False)
+    @handle_errors
+    def archive_material(self, material_id):
+        """Archive a material (soft delete)."""
+        material = request.env['materials.material'].get_by_id(material_id, include_archived=True)
+        if not material:
+            return _json_response({'error': 'Material not found'}, status=404)
+        if not material.active:
+            return _json_response({'error': 'Material is already archived'}, status=400)
+        material.write({'active': False})
+        return _json_response({'message': 'Material archived successfully'})
+
+    @http.route('/api/materials/<int:material_id>/unarchive', type='http', auth='user', methods=['POST'], csrf=False)
+    @handle_errors
+    def unarchive_material(self, material_id):
+        """Unarchive a material (restore)."""
+        material = request.env['materials.material'].get_by_id(material_id, include_archived=True)
+        if not material:
+            return _json_response({'error': 'Material not found'}, status=404)
+        if material.active:
+            return _json_response({'error': 'Material is not archived'}, status=400)
+        material.write({'active': True})
+        return _json_response({'message': 'Material unarchived successfully'})
+
     @http.route('/api/materials/available_types', type='http', auth='user', methods=['GET'], csrf=False)
     @handle_errors
     def get_available_types(self):

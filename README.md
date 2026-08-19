@@ -1,6 +1,8 @@
-# Materials Management - Odoo 14 Module
+# Materials API — Odoo 14
 
-REST API module for managing materials (fabric, jeans, cotton) with supplier associations.
+A custom Odoo 14 module for registering and managing materials through a REST-style API.
+
+The module implements material CRUD operations, supplier management, validation, pagination, search, sorting, filtering, archive/unarchive, access control, and automated tests.
 
 ## Requirements
 
@@ -13,104 +15,87 @@ git clone https://github.com/dalhaqq/odoo-materials-addon.git /path/to/odoo/addo
 ```
 
 Restart Odoo, update module list, install "Materials".
+## Features
 
-## Model: `materials.material`
+- REST-style API under the `/api` namespace
+- Material CRUD operations
+- Material type validation:
+  - `fabric`
+  - `jeans`
+  - `cotton`
+- Supplier management through `res.partner`
+- Minimum buy price validation
+- Unique material code validation
+- Pagination
+- Search by material code and name
+- Sorting
+- Single and multiple material-type filtering
+- Request field allowlisting
+- Centralized API error handling
+- HTTP status codes
+- Archive and unarchive operations
+- Permanent deletion
+- Odoo access control
+- Automated model and controller tests
+- Postman collection for manual testing
 
-| Field | Type | Required | Notes |
-|-------|------|----------|-------|
-| `code` | Char | Yes | Unique identifier |
-| `name` | Char | Yes | Material name |
-| `type` | Selection | Yes | `fabric`, `jeans`, `cotton` |
-| `buy_price` | Float | Yes | Minimum 100 |
-| `supplier_id` | Many2one | Yes | Links to `res.partner` |
-| `active` | Boolean | - | Default `True` (soft delete) |
+## API Endpoints
 
-## API Reference
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/materials` | List materials |
+| GET | `/api/materials/<id>` | Get a material |
+| POST | `/api/materials` | Create a material |
+| PATCH | `/api/materials/<id>` | Update a material |
+| DELETE | `/api/materials/<id>` | Permanently delete a material |
+| POST | `/api/materials/<id>/archive` | Archive a material |
+| POST | `/api/materials/<id>/unarchive` | Unarchive a material |
+| GET | `/api/materials/available_types` | Get available material types |
+| GET | `/api/materials/suppliers` | Get suppliers |
 
-REST API using proper HTTP methods. Authenticate via session.
+## Documentation
 
-### GET /api/materials - List materials (with optional type filter)
+- [API Documentation](docs/API.md) — API endpoints, parameters, request/response examples, and error responses
+- [Technical Explanation](docs/TECHNICAL_EXPLANATION.md) — architecture, design decisions, validation, security, testing, and implementation notes
+- [ERD](docs/ERD.md) — database schema and relationships
+- [Postman Collection](docs/postman_collection.json) — collection for manual API testing
 
-**Query Params:**
-```
-?type=fabric              # filter by type
-?type=fabric,jeans        # filter by multiple types
-?page=1&limit=20&search=keyword&sort=code&order=asc
-```
+## Testing
 
-**Response:**
-```json
-{
-  "materials": [{"id": 1, "code": "M001", "name": "Fabric A", "type": "fabric", "buy_price": 200, "supplier_id": [1, "Supplier 1"]}],
-  "total": 10,
-  "page": 1,
-  "limit": 20,
-  "pages": 1
-}
-```
+The repository contains both model-level and HTTP-level automated tests.
 
-### GET /api/materials/<id> - Get single material
+The test suite covers:
 
-```json
-{
-  "material": {"id": 1, "code": "M001", "name": "Fabric A", "type": "fabric", "buy_price": 200, "supplier_id": [1, "Supplier 1"]}
-}
-```
+- Material CRUD
+- Validation
+- Buy price boundary conditions
+- Duplicate material codes
+- Pagination
+- Search
+- Sorting
+- Filtering
+- Supplier filtering
+- Field allowlisting
+- Archive/unarchive
+- Error responses
+- Access-related behavior
+- Copy behavior
 
-### POST /api/materials - Create material
-
-**Body:**
-```json
-{
-  "code": "M001",
-  "name": "Fabric A",
-  "type": "fabric",
-  "buy_price": 200,
-  "supplier_id": 1
-}
-```
-
-### PATCH /api/materials/<id> - Update material
-
-**Body (partial update):**
-```json
-{"buy_price": 300}
-```
-
-### DELETE /api/materials/<id> - Delete material
-
-**Response:**
-```json
-{"message": "Material deleted successfully"}
-```
-
-### GET /api/materials/available_types - List type options
-
-### GET /api/materials/suppliers - List suppliers
-
-Returns partners with `is_supplier=True`.
-
-## Error Responses
-
-All endpoints return errors in this format:
-```json
-{"error": "Error message here"}
-```
-
-Common errors:
-| Status | Error | Cause |
-|--------|-------|-------|
-| 400 | `Missing required fields: [...]` | Required field not provided |
-| 400 | `Material Buy Price cannot be less than 100` | Price below minimum |
-| 400 | `Material Code must be unique` | Duplicate code |
-| 404 | `Material not found` | Invalid ID |
-| 400 | `Invalid material type(s): [...]` | Unknown type value |
-
-## Tests
+Run the module tests using the provided Odoo development/test setup.
 
 ```sh
 odoo-bin -d test_db --test-tags /material -i materials --stop-after-init
 ```
+
+## Technical Context
+
+This repository is an evolution of a solution submitted for the same technical test approximately two years ago.
+
+The current implementation was substantially refactored and extended based on experience gained since the original submission, particularly in backend development, API design, testing, validation, security, and maintainability.
+
+The original implementation is preserved in Git history for comparison.
+
+For the detailed rationale behind the implementation, see [Technical Explanation](docs/TECHNICAL_EXPLANATION.md).
 
 ## License
 

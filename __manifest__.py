@@ -1,6 +1,6 @@
 {
     'name': 'Materials',
-    'version': '14.0.4.0.0',
+    'version': '14.0.5.0.0',
     'author': 'Abdalhaqq Muhammad Saih',
     'website': 'https://github.com/dalhaqq/odoo-materials-addon',
     'application': True,

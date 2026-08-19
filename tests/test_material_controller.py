@@ -374,3 +374,61 @@ class TestMaterialController(HttpCase):
         result = json.loads(response.text)
         self.assertNotIn('error', result)
         self.assertEqual(result['material'][0]['code'], 'M001-NEW')
+
+    # --- Archive/Unarchive tests ---
+
+    def test_archive_material(self):
+        """POST /archive should set active=False."""
+        self.authenticate('testuser', 'testuser')
+        response = self.url_open(f'/api/materials/{self.material1.id}/archive',
+                                 method='POST')
+        result = json.loads(response.text)
+        self.assertNotIn('error', result)
+        self.assertIn('Material archived successfully', result['message'])
+        # Should not appear in list
+        response = self.url_open('/api/materials')
+        result = json.loads(response.text)
+        ids = [m['id'] for m in result['materials']]
+        self.assertNotIn(self.material1.id, ids)
+
+    def test_archive_already_archived(self):
+        """POST /archive on already archived should return 400."""
+        self.material1.active = False
+        self.authenticate('testuser', 'testuser')
+        response = self.url_open(f'/api/materials/{self.material1.id}/archive',
+                                 method='POST')
+        result = json.loads(response.text)
+        self.assertIn('error', result)
+        self.assertIn('already archived', result['error'])
+
+    def test_unarchive_material(self):
+        """POST /unarchive should set active=True."""
+        self.material1.active = False
+        self.authenticate('testuser', 'testuser')
+        response = self.url_open(f'/api/materials/{self.material1.id}/unarchive',
+                                 method='POST')
+        result = json.loads(response.text)
+        self.assertNotIn('error', result)
+        self.assertIn('Material unarchived successfully', result['message'])
+        # Should appear in list again
+        response = self.url_open('/api/materials')
+        result = json.loads(response.text)
+        ids = [m['id'] for m in result['materials']]
+        self.assertIn(self.material1.id, ids)
+
+    def test_unarchive_not_archived(self):
+        """POST /unarchive on active material should return 400."""
+        self.authenticate('testuser', 'testuser')
+        response = self.url_open(f'/api/materials/{self.material1.id}/unarchive',
+                                 method='POST')
+        result = json.loads(response.text)
+        self.assertIn('error', result)
+        self.assertIn('not archived', result['error'])
+
+    def test_archive_not_found(self):
+        """POST /archive with invalid ID should return 404."""
+        self.authenticate('testuser', 'testuser')
+        response = self.url_open('/api/materials/999999/archive', method='POST')
+        result = json.loads(response.text)
+        self.assertIn('error', result)
+        self.assertIn('Material not found', result['error'])

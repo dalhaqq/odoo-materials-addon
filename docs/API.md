@@ -218,6 +218,60 @@ DELETE /api/materials/1
 
 ---
 
+## POST /api/materials/<id>/archive
+
+Archive a material (soft delete). Sets `active=False`.
+
+**Example Request:**
+
+```
+POST /api/materials/1/archive
+```
+
+**Response (200):**
+
+```json
+{
+  "message": "Material archived successfully"
+}
+```
+
+**Errors:**
+
+| Status | Error | Cause |
+|--------|-------|-------|
+| 404 | `Material not found` | Invalid material ID |
+| 400 | `Material is already archived` | Material already inactive |
+
+---
+
+## POST /api/materials/<id>/unarchive
+
+Unarchive a material (restore). Sets `active=True`.
+
+**Example Request:**
+
+```
+POST /api/materials/1/unarchive
+```
+
+**Response (200):**
+
+```json
+{
+  "message": "Material unarchived successfully"
+}
+```
+
+**Errors:**
+
+| Status | Error | Cause |
+|--------|-------|-------|
+| 404 | `Material not found` | Invalid material ID |
+| 400 | `Material is not archived` | Material already active |
+
+---
+
 ## GET /api/materials/available_types
 
 Get all available material type options.

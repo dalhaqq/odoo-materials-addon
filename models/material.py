@@ -37,9 +37,15 @@ class Material(models.Model):
         """Return list of available material types."""
         return self._fields['type'].selection
 
-    def get_by_id(self, material_id):
-        """Get material by ID or return None if not found."""
-        material = self.browse(material_id)
+    def get_by_id(self, material_id, include_archived=False):
+        """Get material by ID or return None if not found.
+
+        Args:
+            material_id: Record ID
+            include_archived: If True, also find archived records
+        """
+        env = self.with_context(active_test=not include_archived) if include_archived else self
+        material = env.browse(material_id)
         return material if material.exists() else None
 
     def copy(self, default=None):

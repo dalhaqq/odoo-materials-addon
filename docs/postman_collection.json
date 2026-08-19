@@ -155,6 +155,28 @@
               "path": ["api", "materials", "{{material_id}}"]
             }
           }
+        },
+        {
+          "name": "Archive Material",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/materials/{{material_id}}/archive",
+              "host": ["{{base_url}}"],
+              "path": ["api", "materials", "{{material_id}}", "archive"]
+            }
+          }
+        },
+        {
+          "name": "Unarchive Material",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/materials/{{material_id}}/unarchive",
+              "host": ["{{base_url}}"],
+              "path": ["api", "materials", "{{material_id}}", "unarchive"]
+            }
+          }
         }
       ]
     },
